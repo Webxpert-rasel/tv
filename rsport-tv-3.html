@@ -1,0 +1,219 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>rsport TV</title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0;animation:none!important;transition:none!important}
+    :root{--bg:#030712;--card:#0b0f19;--accent:#2563eb;--text:#f1f5f9;--muted:#94a3b8;--border:rgba(255,255,255,0.07)}
+    body{background:var(--bg);color:var(--text);font-family:system-ui,sans-serif;min-height:100vh;padding:20px}
+
+    /* Header */
+    .header{display:flex;align-items:center;gap:12px;margin-bottom:20px}
+    .logo{width:42px;height:42px;background:#2563eb;border-radius:10px;display:flex;align-items:center;justify-content:center}
+    .logo svg{width:24px;height:24px;fill:#fff}
+    .brand{font-size:28px;font-weight:900}
+    .tv-pill{font-size:10px;font-weight:800;text-transform:uppercase;background:#059669;color:#fff;padding:3px 9px;border-radius:6px;margin-left:6px}
+
+    /* Layout */
+    .layout{display:grid;grid-template-columns:1fr 260px;gap:20px;align-items:start}
+
+    /* Player */
+    .player-wrap{background:#000;border-radius:14px;overflow:hidden;border:1px solid var(--border)}
+    .player-inner{position:relative;width:100%;aspect-ratio:16/9}
+    video{width:100%;height:100%;display:block;background:#000;object-fit:contain}
+    iframe#ifr{display:none;position:absolute;inset:0;width:100%;height:100%;border:none}
+
+    /* Channel panel */
+    .panel{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:18px;display:flex;flex-direction:column;gap:10px}
+    .panel-title{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:4px}
+
+    .ch-btn{display:flex;align-items:center;gap:12px;background:rgba(255,255,255,.02);border:1px solid var(--border);border-radius:10px;padding:12px 14px;cursor:pointer;color:var(--text);font-family:inherit;width:100%;text-align:left}
+    .ch-btn.active{background:rgba(37,99,235,.15);border-color:#2563eb}
+    .ch-icon{width:38px;height:38px;border-radius:8px;overflow:hidden;flex-shrink:0;border:1px solid rgba(255,255,255,.06)}
+    .ch-icon img{width:38px;height:38px;object-fit:cover}
+    .ch-info{flex:1;min-width:0}
+    .ch-name{font-size:13px;font-weight:700}
+    .ch-tag{display:inline-block;font-size:8px;font-weight:800;text-transform:uppercase;padding:2px 6px;border-radius:3px;margin-top:3px;background:rgba(37,99,235,.12);color:#93c5fd}
+    .ch-btn.active .ch-tag{background:rgba(16,185,129,.12);color:#34d399}
+    .dot-wrap{font-size:8px;font-weight:700;text-transform:uppercase;display:flex;align-items:center;gap:4px;flex-shrink:0}
+    .dot{width:6px;height:6px;border-radius:50%;background:#f59e0b}
+    .dot.live{background:#10b981}
+    .dot.off{background:#ef4444}
+  </style>
+</head>
+<body>
+
+<header class="header">
+  <div class="logo">
+    <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.53c-.26-.81-1-1.4-1.9-1.4h-1v-3c0-.55-.45-1-1-1h-6v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg>
+  </div>
+  <span class="brand">rsport<span class="tv-pill">TV</span></span>
+</header>
+
+<div class="layout">
+  <div class="player-wrap">
+    <div class="player-inner">
+      <video id="vid" controls autoplay playsinline></video>
+      <iframe id="ifr" allowfullscreen allow="autoplay;encrypted-media;picture-in-picture"></iframe>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-title">📺 Live Channels</div>
+    <div id="ch-list"></div>
+  </div>
+</div>
+
+<script>
+const _d = s => atob(s);
+const ICON = 'https://webxpert-rasel.github.io/worldcupicon/IMG_20260613_202814.jpg';
+
+const channels = [
+  { name:'Server 1', url:_d('aHR0cHM6Ly8xbnlhbGVyLnN0cmVhbWhvc3RpbmdjZG4udG9wL3N0cmVhbS8zMi9pbmRleC5tM3U4'), tag:'HD',    fmt:'hls' },
+  { name:'Server 2', url:_d('aHR0cHM6Ly9maWZhLXdvcmxkLWN1cC1saXZlLnBhZ2VzLmRldi9jYXplLXR2'),                   tag:'1080p', fmt:'iframe' },
+  { name:'Server 3', url:_d('aHR0cHM6Ly9saXZlLnZydGNkbi5iZS9ncm91cGQvbGl2ZS8wNzYxMDI0Zi0zN2ZlLTQyNTQtYmMzNy1lOTVkN2M2MmIyZDEvbGl2ZS5pc21sLy5tcGQ='), tag:'DRM', fmt:'dash', clearKeys:{'893bc63340876605f52886a42e0ccce5':'d6c46d2d691056fbd091bf1f01b21a91'} },
+  { name:'Server 4', url:'https://1nyaler.streamhostingcdn.top/stream/84/index.m3u8',  tag:'HD', fmt:'hls' },
+  { name:'Server 5', url:'https://1nyaler.streamhostingcdn.top/stream/106/index.m3u8', tag:'HD', fmt:'hls' },
+  { name:'Server 6', url:'https://1nyaler.streamhostingcdn.top/stream/89/index.m3u8',  tag:'HD', fmt:'hls' },
+  { name:'Server 7', url:'https://ua.online24.pm/play/1101/350B326FB34F4B8/video.m3u8',tag:'HD', fmt:'hls' },
+];
+
+const vid = document.getElementById('vid');
+const ifr = document.getElementById('ifr');
+const list = document.getElementById('ch-list');
+let hls = null, shaka = null, activeIdx = -1;
+
+// Build channel buttons
+channels.forEach((ch, i) => {
+  const btn = document.createElement('button');
+  btn.className = 'ch-btn';
+  btn.id = 'btn-' + i;
+  btn.innerHTML = `
+    <div class="ch-icon"><img src="${ICON}" width="38" height="38" loading="lazy"/></div>
+    <div class="ch-info">
+      <div class="ch-name">${ch.name}</div>
+      <span class="ch-tag">${ch.tag}</span>
+    </div>
+    <div class="dot-wrap"><div class="dot" id="dot-${i}"></div></div>
+  `;
+  btn.onclick = () => play(i);
+  list.appendChild(btn);
+});
+
+function setDot(i, state) {
+  const d = document.getElementById('dot-' + i);
+  if (!d) return;
+  d.className = 'dot' + (state === 'live' ? ' live' : state === 'off' ? ' off' : '');
+}
+
+function setActive(i) {
+  if (activeIdx >= 0) {
+    const prev = document.getElementById('btn-' + activeIdx);
+    if (prev) prev.classList.remove('active');
+  }
+  activeIdx = i;
+  const cur = document.getElementById('btn-' + i);
+  if (cur) cur.classList.add('active');
+}
+
+function cleanup() {
+  if (hls) { try { hls.destroy(); } catch(e){} hls = null; }
+  if (shaka) { try { shaka.destroy(); } catch(e){} shaka = null; }
+  vid.src = '';
+  vid.style.display = 'block';
+  ifr.style.display = 'none';
+  ifr.src = '';
+}
+
+async function play(i) {
+  const ch = channels[i];
+  cleanup();
+  setActive(i);
+  setDot(i, 'checking');
+
+  if (ch.fmt === 'iframe') {
+    vid.style.display = 'none';
+    ifr.style.display = 'block';
+    ifr.src = ch.url;
+    setDot(i, 'live');
+    return;
+  }
+
+  vid.style.display = 'block';
+  ifr.style.display = 'none';
+
+  // DASH (Shaka)
+  if (ch.fmt === 'dash') {
+    if (!window.shaka) { setDot(i, 'off'); return; }
+    window.shaka.polyfill.installAll();
+    if (!window.shaka.Player.isBrowserSupported()) { setDot(i, 'off'); return; }
+    shaka = new window.shaka.Player(vid);
+    if (ch.clearKeys) shaka.configure({ drm: { clearKeys: ch.clearKeys } });
+    shaka.addEventListener('error', () => setDot(i, 'off'));
+    try { await shaka.load(ch.url); setDot(i, 'live'); } catch(e) { setDot(i, 'off'); }
+    return;
+  }
+
+  // HLS — native first (Safari/TV browsers), then hls.js
+  if (vid.canPlayType('application/vnd.apple.mpegurl')) {
+    vid.src = ch.url;
+    vid.onloadeddata = () => setDot(i, 'live');
+    vid.onerror = () => setDot(i, 'off');
+    vid.load();
+    return;
+  }
+
+  if (window.Hls && window.Hls.isSupported()) {
+    hls = new window.Hls({
+      enableWorker: false,      // TV: no web worker
+      lowLatencyMode: false,
+      backBufferLength: 10,
+      maxBufferLength: 20,
+      maxMaxBufferLength: 30,
+      manifestLoadingMaxRetry: 3,
+      fragLoadingMaxRetry: 4,
+      fragLoadingRetryDelay: 2000,
+    });
+    hls.loadSource(ch.url);
+    hls.attachMedia(vid);
+    hls.on(window.Hls.Events.MANIFEST_PARSED, () => setDot(i, 'live'));
+    let retries = 0;
+    hls.on(window.Hls.Events.ERROR, (_, d) => {
+      if (!d.fatal) return;
+      if (d.type === window.Hls.ErrorTypes.NETWORK_ERROR && retries++ < 2) {
+        setTimeout(() => hls && hls.startLoad(), 2500);
+      } else if (d.type === window.Hls.ErrorTypes.MEDIA_ERROR) {
+        hls && hls.recoverMediaError();
+      } else {
+        setDot(i, 'off');
+      }
+    });
+    vid.addEventListener('playing', () => { retries = 0; }, { once: false, passive: true });
+    return;
+  }
+
+  setDot(i, 'off');
+}
+
+// ── Staged boot: load libs first, then start playback ──
+function loadScript(src, cb) {
+  const s = document.createElement('script');
+  s.src = src;
+  s.onload = cb;
+  s.onerror = cb; // continue even on fail
+  document.head.appendChild(s);
+}
+
+// Load HLS.js → then Shaka (3s later) → then auto-play Server 1
+loadScript('https://cdn.jsdelivr.net/npm/hls.js@1.4.12/dist/hls.min.js', () => {
+  play(0); // start Server 1 as soon as HLS.js is ready
+  setTimeout(() => {
+    loadScript('https://cdnjs.cloudflare.com/ajax/libs/shaka-player/4.7.11/shaka-player.compiled.js', () => {});
+  }, 4000); // shaka deferred so it doesn't compete with active stream
+});
+</script>
+
+</body>
+</html>
